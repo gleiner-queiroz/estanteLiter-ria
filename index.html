@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minha Estante Literária</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        .book-spine {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+        }
+        
+        .book-card {
+            transition: all 0.3s ease;
+        }
+        
+        .book-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .modal-backdrop {
+            backdrop-filter: blur(4px);
+        }
+        
+        .reading-progress {
+            background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-amber-50 to-orange-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-lg border-b-4 border-amber-400">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="text-4xl">📚</div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900">Minha Estante Literária</h1>
+                        <p class="text-gray-600">Organize e acompanhe suas leituras</p>
+                    </div>
+                </div>
+                <button onclick="openAddBookModal()" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center space-x-2">
+                    <span class="text-xl">+</span>
+                    <span>Adicionar Livro</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Stats Section -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl p-6 shadow-lg border-l-4 border-blue-500">
+                <div class="flex items-center">
+                    <div class="text-3xl mr-4">📖</div>
+                    <div>
+                        <p class="text-sm text-gray-600">Total de Livros</p>
+                        <p class="text-2xl font-bold text-gray-900" id="totalBooks">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-6 shadow-lg border-l-4 border-green-500">
+                <div class="flex items-center">
+                    <div class="text-3xl mr-4">✅</div>
+                    <div>
+                        <p class="text-sm text-gray-600">Livros Lidos</p>
+                        <p class="text-2xl font-bold text-gray-900" id="readBooks">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-6 shadow-lg border-l-4 border-yellow-500">
+                <div class="flex items-center">
+                    <div class="text-3xl mr-4">📚</div>
+                    <div>
+                        <p class="text-sm text-gray-600">Lendo Agora</p>
+                        <p class="text-2xl font-bold text-gray-900" id="readingBooks">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl p-6 shadow-lg border-l-4 border-purple-500">
+                <div class="flex items-center">
+                    <div class="text-3xl mr-4">⏳</div>
+                    <div>
+                        <p class="text-sm text-gray-600">Para Ler</p>
+                        <p class="text-2xl font-bold text-gray-900" id="toReadBooks">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Buttons -->
+        <div class="flex flex-wrap gap-3 mb-8">
+            <button onclick="filterBooks('all')" class="filter-btn bg-gray-800 text-white px-4 py-2 rounded-lg font-medium transition-colors">
+                Todos os Livros
+            </button>
+            <button onclick="filterBooks('reading')" class="filter-btn bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors hover:bg-gray-300">
+                Lendo Agora
+            </button>
+            <button onclick="filterBooks('read')" class="filter-btn bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors hover:bg-gray-300">
+                Já Lidos
+            </button>
+            <button onclick="filterBooks('to-read')" class="filter-btn bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors hover:bg-gray-300">
+                Para Ler
+            </button>
+        </div>
+
+        <!-- Books Grid -->
+        <div id="booksGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Books will be dynamically added here -->
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="text-center py-16">
+            <div class="text-6xl mb-4">📚</div>
+            <h3 class="text-xl font-semibold text-gray-700 mb-2">Sua estante está vazia</h3>
+            <p class="text-gray-500 mb-6">Comece adicionando seu primeiro livro!</p>
+            <button onclick="openAddBookModal()" class="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                Adicionar Primeiro Livro
+            </button>
+        </div>
+    </div>
+
+    <!-- Add Book Modal -->
+    <div id="addBookModal" class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Adicionar Novo Livro</h2>
+                <button onclick="closeAddBookModal()" class="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+            </div>
+            
+            <form id="addBookForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Título *</label>
+                    <input type="text" id="bookTitle" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Autor *</label>
+                    <input type="text" id="bookAuthor" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Gênero</label>
+                    <select id="bookGenre" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                        <option value="">Selecione um gênero</option>
+                        <option value="Ficção">Ficção</option>
+                        <option value="Romance">Romance</option>
+                        <option value="Mistério">Mistério</option>
+                        <option value="Fantasia">Fantasia</option>
+                        <option value="Biografia">Biografia</option>
+                        <option value="História">História</option>
+                        <option value="Autoajuda">Autoajuda</option>
+                        <option value="Técnico">Técnico</option>
+                        <option value="Outro">Outro</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Páginas</label>
+                    <input type="number" id="bookPages" min="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                    <select id="bookStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                        <option value="to-read">Para Ler</option>
+                        <option value="reading">Lendo Agora</option>
+                        <option value="read">Já Li</option>
+                    </select>
+                </div>
+                
+                <div id="progressSection" class="hidden">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Progresso (páginas lidas)</label>
+                    <input type="number" id="bookProgress" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Avaliação (1-5 estrelas)</label>
+                    <div class="flex space-x-1" id="ratingStars">
+                        <button type="button" onclick="setRating(1)" class="star text-2xl text-gray-300 hover:text-yellow-400">★</button>
+                        <button type="button" onclick="setRating(2)" class="star text-2xl text-gray-300 hover:text-yellow-400">★</button>
+                        <button type="button" onclick="setRating(3)" class="star text-2xl text-gray-300 hover:text-yellow-400">★</button>
+                        <button type="button" onclick="setRating(4)" class="star text-2xl text-gray-300 hover:text-yellow-400">★</button>
+                        <button type="button" onclick="setRating(5)" class="star text-2xl text-gray-300 hover:text-yellow-400">★</button>
+                    </div>
+                    <input type="hidden" id="bookRating" value="0">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Notas</label>
+                    <textarea id="bookNotes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent" placeholder="Suas impressões sobre o livro..."></textarea>
+                </div>
+                
+                <div class="flex space-x-3 pt-4">
+                    <button type="submit" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-2 px-4 rounded-lg font-semibold transition-colors">
+                        Adicionar Livro
+                    </button>
+                    <button type="button" onclick="closeAddBookModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg font-semibold transition-colors">
+                        Cancelar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Book Details Modal -->
+    <div id="bookDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 modal-backdrop hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-900">Detalhes do Livro</h2>
+                <button onclick="closeBookDetailsModal()" class="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+            </div>
+            
+            <div id="bookDetailsContent">
+                <!-- Book details will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let books = JSON.parse(localStorage.getItem('literaryShelf')) || [];
+        let currentFilter = 'all';
+        let selectedRating = 0;
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            renderBooks();
+            updateStats();
+            
+            // Show/hide progress section based on status
+            document.getElementById('bookStatus').addEventListener('change', function() {
+                const progressSection = document.getElementById('progressSection');
+                if (this.value === 'reading') {
+                    progressSection.classList.remove('hidden');
+                } else {
+                    progressSection.classList.add('hidden');
+                }
+            });
+        });
+
+        function openAddBookModal() {
+            document.getElementById('addBookModal').classList.remove('hidden');
+            document.getElementById('bookTitle').focus();
+        }
+
+        function closeAddBookModal() {
+            document.getElementById('addBookModal').classList.add('hidden');
+            document.getElementById('addBookForm').reset();
+            selectedRating = 0;
+            updateStarDisplay();
+        }
+
+        function openBookDetailsModal(bookId) {
+            const book = books.find(b => b.id === bookId);
+            if (!book) return;
+
+            const modal = document.getElementById('bookDetailsModal');
+            const content = document.getElementById('bookDetailsContent');
+            
+            const statusColors = {
+                'reading': 'bg-blue-100 text-blue-800',
+                'read': 'bg-green-100 text-green-800',
+                'to-read': 'bg-yellow-100 text-yellow-800'
+            };
+            
+            const statusLabels = {
+                'reading': 'Lendo Agora',
+                'read': 'Já Li',
+                'to-read': 'Para Ler'
+            };
+
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="text-center">
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">${book.title}</h3>
+                        <p class="text-gray-600 mb-4">por ${book.author}</p>
+                        <span class="inline-block px-3 py-1 rounded-full text-sm font-medium ${statusColors[book.status]}">
+                            ${statusLabels[book.status]}
+                        </span>
+                    </div>
+                    
+                    ${book.genre ? `<div><strong>Gênero:</strong> ${book.genre}</div>` : ''}
+                    ${book.pages ? `<div><strong>Páginas:</strong> ${book.pages}</div>` : ''}
+                    
+                    ${book.status === 'reading' && book.progress ? `
+                        <div>
+                            <strong>Progresso:</strong> ${book.progress}/${book.pages} páginas
+                            <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                                <div class="reading-progress h-2 rounded-full" style="width: ${(book.progress / book.pages) * 100}%"></div>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${book.rating > 0 ? `
+                        <div>
+                            <strong>Avaliação:</strong>
+                            <div class="flex items-center mt-1">
+                                ${Array.from({length: 5}, (_, i) => 
+                                    `<span class="text-xl ${i < book.rating ? 'text-yellow-400' : 'text-gray-300'}">★</span>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${book.notes ? `
+                        <div>
+                            <strong>Notas:</strong>
+                            <p class="mt-2 text-gray-700 bg-gray-50 p-3 rounded-lg">${book.notes}</p>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="flex space-x-3 pt-4">
+                        <button onclick="editBook('${book.id}')" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg font-semibold transition-colors">
+                            Editar
+                        </button>
+                        <button onclick="deleteBook('${book.id}')" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg font-semibold transition-colors">
+                            Excluir
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeBookDetailsModal() {
+            document.getElementById('bookDetailsModal').classList.add('hidden');
+        }
+
+        function setRating(rating) {
+            selectedRating = rating;
+            document.getElementById('bookRating').value = rating;
+            updateStarDisplay();
+        }
+
+        function updateStarDisplay() {
+            const stars = document.querySelectorAll('.star');
+            stars.forEach((star, index) => {
+                if (index < selectedRating) {
+                    star.classList.remove('text-gray-300');
+                    star.classList.add('text-yellow-400');
+                } else {
+                    star.classList.remove('text-yellow-400');
+                    star.classList.add('text-gray-300');
+                }
+            });
+        }
+
+        document.getElementById('addBookForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const book = {
+                id: Date.now().toString(),
+                title: document.getElementById('bookTitle').value,
+                author: document.getElementById('bookAuthor').value,
+                genre: document.getElementById('bookGenre').value,
+                pages: parseInt(document.getElementById('bookPages').value) || null,
+                status: document.getElementById('bookStatus').value,
+                progress: parseInt(document.getElementById('bookProgress').value) || 0,
+                rating: selectedRating,
+                notes: document.getElementById('bookNotes').value,
+                dateAdded: new Date().toISOString()
+            };
+            
+            books.push(book);
+            localStorage.setItem('literaryShelf', JSON.stringify(books));
+            
+            renderBooks();
+            updateStats();
+            closeAddBookModal();
+        });
+
+        function renderBooks() {
+            const grid = document.getElementById('booksGrid');
+            const emptyState = document.getElementById('emptyState');
+            
+            let filteredBooks = books;
+            if (currentFilter !== 'all') {
+                filteredBooks = books.filter(book => book.status === currentFilter);
+            }
+            
+            if (filteredBooks.length === 0) {
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            grid.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            
+            grid.innerHTML = filteredBooks.map(book => {
+                const statusColors = {
+                    'reading': 'border-blue-500 bg-blue-50',
+                    'read': 'border-green-500 bg-green-50',
+                    'to-read': 'border-yellow-500 bg-yellow-50'
+                };
+                
+                const statusIcons = {
+                    'reading': '📖',
+                    'read': '✅',
+                    'to-read': '⏳'
+                };
+                
+                return `
+                    <div class="book-card bg-white rounded-xl shadow-lg border-l-4 ${statusColors[book.status]} p-6 cursor-pointer" onclick="openBookDetailsModal('${book.id}')">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="text-2xl">${statusIcons[book.status]}</div>
+                            ${book.rating > 0 ? `
+                                <div class="flex">
+                                    ${Array.from({length: book.rating}, () => '<span class="text-yellow-400 text-sm">★</span>').join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                        
+                        <h3 class="font-bold text-gray-900 mb-2 line-clamp-2">${book.title}</h3>
+                        <p class="text-gray-600 text-sm mb-3">por ${book.author}</p>
+                        
+                        ${book.genre ? `<span class="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs mb-3">${book.genre}</span>` : ''}
+                        
+                        ${book.status === 'reading' && book.pages && book.progress ? `
+                            <div class="mt-3">
+                                <div class="flex justify-between text-xs text-gray-600 mb-1">
+                                    <span>Progresso</span>
+                                    <span>${book.progress}/${book.pages}</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="reading-progress h-2 rounded-full" style="width: ${(book.progress / book.pages) * 100}%"></div>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateStats() {
+            const total = books.length;
+            const read = books.filter(book => book.status === 'read').length;
+            const reading = books.filter(book => book.status === 'reading').length;
+            const toRead = books.filter(book => book.status === 'to-read').length;
+            
+            document.getElementById('totalBooks').textContent = total;
+            document.getElementById('readBooks').textContent = read;
+            document.getElementById('readingBooks').textContent = reading;
+            document.getElementById('toReadBooks').textContent = toRead;
+        }
+
+        function filterBooks(filter) {
+            currentFilter = filter;
+            
+            // Update button styles
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-gray-800', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            
+            event.target.classList.remove('bg-gray-200', 'text-gray-700');
+            event.target.classList.add('bg-gray-800', 'text-white');
+            
+            renderBooks();
+        }
+
+        function deleteBook(bookId) {
+            if (confirm('Tem certeza que deseja excluir este livro?')) {
+                books = books.filter(book => book.id !== bookId);
+                localStorage.setItem('literaryShelf', JSON.stringify(books));
+                renderBooks();
+                updateStats();
+                closeBookDetailsModal();
+            }
+        }
+
+        function editBook(bookId) {
+            // For simplicity, we'll just show the add modal with pre-filled data
+            const book = books.find(b => b.id === bookId);
+            if (!book) return;
+            
+            // Remove the book temporarily for editing
+            books = books.filter(b => b.id !== bookId);
+            
+            // Fill the form
+            document.getElementById('bookTitle').value = book.title;
+            document.getElementById('bookAuthor').value = book.author;
+            document.getElementById('bookGenre').value = book.genre || '';
+            document.getElementById('bookPages').value = book.pages || '';
+            document.getElementById('bookStatus').value = book.status;
+            document.getElementById('bookProgress').value = book.progress || '';
+            document.getElementById('bookNotes').value = book.notes || '';
+            
+            selectedRating = book.rating || 0;
+            updateStarDisplay();
+            
+            // Show progress section if needed
+            if (book.status === 'reading') {
+                document.getElementById('progressSection').classList.remove('hidden');
+            }
+            
+            closeBookDetailsModal();
+            openAddBookModal();
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966f7d2d24c4572a',t:'MTc1MzgyMjIzMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
